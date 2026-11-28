@@ -24,38 +24,42 @@ export function HomeScreen() {
 
   return (
     <div className="pb-6">
-      <h2 className="text-2xl font-semibold">
+      <h2 className="text-2xl font-semibold lg:text-3xl">
         {t("greeting")}, {firstName} 👋
       </h2>
       <div className="mt-4">
         <SpecialSurveyBanner />
       </div>
 
-      {/* Side by side at ≥620 px, stacked on phones. */}
-      <div className="grid grid-cols-1 gap-4 min-[620px]:grid-cols-2">
+      {/* Phones: stacked. Tablets: check + check-in side by side.
+          Laptops: those two, plus tip and guide in a third column. */}
+      <div className="grid grid-cols-1 gap-4 min-[620px]:grid-cols-2 xl:grid-cols-3">
         <CheckCard onStart={() => router.push("/check")} />
         <DailyCheckinCard profile={profile} />
-      </div>
-
-      <div className="mt-4">
-        <TipOfTheDayCard />
-      </div>
-      <div className="mt-3">
-        <GuideCard />
+        <div className="flex flex-col gap-3 min-[620px]:col-span-2 xl:col-span-1">
+          <TipOfTheDayCard />
+          <GuideCard />
+        </div>
       </div>
 
       <SectionTitle>{t("foodSectionTitle")}</SectionTitle>
-      <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin]">
+      {/* A swipeable row on phones, a grid on bigger screens. */}
+      <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0 lg:grid-cols-6 md:[&>button]:w-full">
         {foodTips.map((tip) => (
           <FoodCard key={tip.nameKey} tip={tip} onOpen={() => setOpenFood(tip)} />
         ))}
       </div>
 
-      <SectionTitle>{t("gd_homeStepsTitle")}</SectionTitle>
-      <HomeSteps items={fiveSteps} />
-
-      <SectionTitle>{t("faqSectionTitle")}</SectionTitle>
-      <HomeFaq faqFor={faqFor} />
+      <div className="lg:grid lg:grid-cols-2 lg:gap-8">
+        <div>
+          <SectionTitle>{t("gd_homeStepsTitle")}</SectionTitle>
+          <HomeSteps items={fiveSteps} />
+        </div>
+        <div>
+          <SectionTitle>{t("faqSectionTitle")}</SectionTitle>
+          <HomeFaq faqFor={faqFor} />
+        </div>
+      </div>
       <div className="flex justify-end">
         <Link
           href={guideTopicHref("faq")}

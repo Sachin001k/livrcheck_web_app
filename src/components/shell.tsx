@@ -167,14 +167,15 @@ export function SiteFooter() {
   );
 }
 
-/** Signed-in app pages: header, 720 px column, bottom tabs on phones. */
+/** Signed-in app pages: header, a wide column (each page picks its own
+ * layout), bottom tabs on phones. */
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   useEffect(() => { window.scrollTo(0, 0); }, [path]);
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="mx-auto w-full max-w-[720px] flex-1 px-4 pt-5 pb-28 lg:pb-12">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-28 sm:px-6 lg:pt-8 lg:pb-12">{children}</main>
       <MobileTabBar />
     </div>
   );

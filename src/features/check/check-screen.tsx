@@ -235,6 +235,24 @@ export function CheckScreen({ guest = false }: { guest?: boolean }) {
     else back();
   });
 
+  // Laptop/desktop: number keys pick an option, Enter presses the main button.
+  useEffect(() => {
+    if (!started || results || saving) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || el?.closest("input, textarea, select")) return;
+      if (/^[1-9]$/.test(e.key)) {
+        const btn = document.querySelector<HTMLButtonElement>(`[data-option-key="${e.key}"]`);
+        if (btn) { e.preventDefault(); btn.click(); }
+      } else if (e.key === "Enter" && !el?.closest("button, a")) {
+        const main = document.querySelector<HTMLButtonElement>("[data-check-main]:not(:disabled)");
+        if (main) { e.preventDefault(); main.click(); }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [started, results, saving]);
+
   if (saving) {
     return (
       <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4" role="status">
@@ -284,11 +302,13 @@ export function CheckScreen({ guest = false }: { guest?: boolean }) {
 
   let body: React.ReactNode;
   if (q.type === "choice") {
+    const opts = q.options!(a);
     body = (
-      <div className="flex flex-col gap-2.5">
-        {q.options!(a).map((o) => (
+      <div className={cx("grid gap-2.5", opts.length > 2 && "sm:grid-cols-2")}>
+        {opts.map((o, i) => (
           <OptionCard
             key={o.v}
+            n={i + 1}
             opt={o}
             selected={a[q.id] === o.v}
             onTap={async () => {
@@ -313,10 +333,12 @@ export function CheckScreen({ guest = false }: { guest?: boolean }) {
     const cur = (Array.isArray(a[q.id]) ? (a[q.id] as string[]) : []).filter((x) => opts.some((o) => o.v === x));
     body = (
       <div className="flex flex-col gap-2.5">
-        {opts.map((o) => (
-          <OptionCard key={o.v} opt={o} selected={cur.includes(o.v)} onTap={() => { haptic(); setAnswer(q.id, toggleMulti(cur, o, opts)); }} />
-        ))}
-        <BigButton className="mt-2" disabled={cur.length === 0} onClick={() => { setAnswer(q.id, cur); next(); }}>
+        <div className={cx("grid gap-2.5", opts.length > 2 && "sm:grid-cols-2")}>
+          {opts.map((o, i) => (
+            <OptionCard key={o.v} n={i + 1} opt={o} selected={cur.includes(o.v)} onTap={() => { haptic(); setAnswer(q.id, toggleMulti(cur, o, opts)); }} />
+          ))}
+        </div>
+        <BigButton data-check-main className="mt-2" disabled={cur.length === 0} onClick={() => { setAnswer(q.id, cur); next(); }}>
           {t("continueButton")}
         </BigButton>
       </div>
@@ -329,7 +351,7 @@ export function CheckScreen({ guest = false }: { guest?: boolean }) {
   }
 
   return (
-    <div className="mx-auto max-w-[520px] pb-10">
+    <div className="mx-auto w-full max-w-[760px] pb-10">
       <div className="flex items-center gap-3">
         <button
           onClick={back}
@@ -342,11 +364,14 @@ export function CheckScreen({ guest = false }: { guest?: boolean }) {
         <ProgressBar value={idx / visible.length} className="h-2" />
         <span className="shrink-0 text-xs text-muted">{tf("sv_stepOf", { n: idx + 1, total: visible.length })}</span>
       </div>
-      <SurfaceCard key={q.id} className="mt-4 animate-fade-up !p-5">
-        <h2 className="text-2xl font-bold">{t(q.title)}</h2>
+      <SurfaceCard key={q.id} className="mt-4 animate-fade-up !p-5 sm:!p-8">
+        <h2 className="text-2xl font-bold sm:text-3xl">{t(q.title)}</h2>
         {q.why && <div className="mt-3 rounded-[14px] bg-mint p-3.5 text-teal-dark">{t(q.why)}</div>}
-        <div className="mt-[18px]">{body}</div>
+        <div className="mt-[18px] sm:mt-6">{body}</div>
       </SurfaceCard>
+      {(q.type === "choice" || q.type === "multi") && (
+        <p className="mt-3 hidden text-center text-sm text-muted lg:block">{t("web_keyHint")}</p>
+      )}
     </div>
   );
 }
@@ -370,38 +395,50 @@ function Intro({ last, guest, onGuestChange, onStart, onOpenLast }: {
     if (nameOk && emailOk && agreed) onStart();
   };
   return (
-    <div className="mx-auto max-w-[520px] pb-10 animate-fade-up">
-      {last && <LastCheckCard entry={last} onOpen={() => onOpenLast(last)} />}
-      <SurfaceCard className={cx("!p-5", last && "mt-4")}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[200px] flex-1">
-            <h2 className="text-[28px] leading-tight font-extrabold">{t("sv_introTitle")}</h2>
-            <p className="mt-2 text-lg text-muted">{t("sv_introSubtitle")}</p>
+    <div className="mx-auto w-full max-w-[1040px] pb-10 animate-fade-up">
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch lg:gap-8">
+        {/* What the check is: a banner on phones, a full panel on wide screens. */}
+        <section className="flex flex-col rounded-[24px] bg-gradient-to-br from-teal-dark to-teal-light p-6 text-white sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[28px] leading-tight font-extrabold sm:text-4xl">{t("sv_introTitle")}</h1>
+              <p className="mt-2 text-lg text-white/85">{t("sv_introSubtitle")}</p>
+            </div>
+            <BodyMap className="w-[84px] shrink-0 rounded-2xl bg-white/90 p-1.5 lg:hidden" />
           </div>
-          <BodyMap className="mx-auto w-[110px] shrink-0" />
+          <ul className="mt-6 space-y-3">
+            {points.map((p) => (
+              <li key={p} className="flex items-start gap-3 text-lg">
+                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm" aria-hidden>✓</span>
+                <span>{t(p)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 hidden flex-1 items-end justify-center lg:flex">
+            <BodyMap className="w-[190px] rounded-[28px] bg-white/90 p-3 shadow-xl" />
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-4">
+          {last && <LastCheckCard entry={last} onOpen={() => onOpenLast(last)} />}
+          <SurfaceCard className="!p-6 sm:!p-8">
+            <h2 className="text-xl font-extrabold">{t(guest ? "web_guestFormTitle" : "sv_startCheck")}</h2>
+            {guest ? (
+              <GuestForm guest={guest} onChange={onGuestChange} agreed={agreed} onAgreed={setAgreed}
+                showErrors={tried} nameOk={nameOk} emailOk={emailOk} onSubmit={startGuest} />
+            ) : (
+              <BigButton className="mt-5" onClick={onStart}>{t("sv_startCheck")}</BigButton>
+            )}
+          </SurfaceCard>
+          {guest && (
+            <p className="text-center text-sm text-muted">
+              {t("web_guestHaveAccount")}{" "}
+              <Link href="/login?next=%2Fcheck" className="font-semibold text-teal-dark hover:underline">{t("web_login")}</Link>
+            </p>
+          )}
+          <p className="text-xs text-muted">{t(kDisclaimer)}</p>
         </div>
-        <ul className="mt-5 space-y-2.5">
-          {points.map((s) => (
-            <li key={s} className="flex items-start gap-2.5 text-lg">
-              <span className="mt-2.5 size-2.5 shrink-0 rounded-full bg-teal-dark" />
-              <span>{t(s)}</span>
-            </li>
-          ))}
-        </ul>
-        {guest ? (
-          <GuestForm guest={guest} onChange={onGuestChange} agreed={agreed} onAgreed={setAgreed}
-            showErrors={tried} nameOk={nameOk} emailOk={emailOk} onSubmit={startGuest} />
-        ) : (
-          <BigButton className="mt-5" onClick={onStart}>{t("sv_startCheck")}</BigButton>
-        )}
-      </SurfaceCard>
-      {guest && (
-        <p className="mt-4 text-center text-sm text-muted">
-          {t("web_guestHaveAccount")}{" "}
-          <Link href="/login?next=%2Fcheck" className="font-semibold text-teal-dark hover:underline">{t("web_login")}</Link>
-        </p>
-      )}
-      <p className="mt-4 text-xs text-muted">{t(kDisclaimer)}</p>
+      </div>
     </div>
   );
 }
@@ -417,7 +454,7 @@ function GuestForm({ guest, onChange, agreed, onAgreed, showErrors, nameOk, emai
   const err = (show: boolean, key: string, id: string) =>
     show ? <span id={id} className="mt-1 block text-sm" style={{ color: kHigh }}>{t(key)}</span> : null;
   return (
-    <form className="mt-5 flex flex-col gap-3" noValidate onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+    <form className="mt-5 flex flex-col gap-4" noValidate onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
       <label className="block text-[15px] font-semibold">
         {t("web_guestName")}
         <input
@@ -485,12 +522,14 @@ function LastCheckCard({ entry, onOpen }: { entry: ScoreEntry; onOpen: () => voi
   );
 }
 
-function OptionCard({ opt, selected, onTap }: { opt: Opt; selected: boolean; onTap: () => void }) {
+function OptionCard({ opt, selected, onTap, n }: { opt: Opt; selected: boolean; onTap: () => void; n: number }) {
   const { t } = useT();
   return (
     <button
       onClick={onTap}
       aria-pressed={selected}
+      aria-keyshortcuts={n <= 9 ? String(n) : undefined}
+      data-option-key={n <= 9 ? n : undefined}
       className={cx(
         "flex w-full items-center gap-3.5 rounded-[18px] border-2 px-4 py-3.5 text-left transition active:scale-[0.99]",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-dark",
@@ -502,7 +541,11 @@ function OptionCard({ opt, selected, onTap }: { opt: Opt; selected: boolean; onT
         <span className="block text-[17px] font-bold">{t(opt.label)}</span>
         {opt.sub && <span className="block text-sm text-muted">{t(opt.sub)}</span>}
       </span>
-      {selected && <span className="flex size-6 items-center justify-center rounded-full bg-teal-dark text-sm text-white">✓</span>}
+      {selected ? (
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-teal-dark text-sm text-white">✓</span>
+      ) : n <= 9 && (
+        <kbd className="hidden size-6 shrink-0 items-center justify-center rounded-md border border-line bg-white font-sans text-xs text-muted lg:flex" aria-hidden>{n}</kbd>
+      )}
     </button>
   );
 }
@@ -528,7 +571,7 @@ function SliderStep({ q, answers, setAnswer, onNext }: {
         {!unknown && <span className="text-lg text-muted"> {t(q.unit)}</span>}
       </div>
       <div className="mt-1.5 min-h-6 text-muted">{unknown ? t("sv_waistEstimateNote") : trText(t, q.alt?.(v) ?? "")}</div>
-      <div className="mt-4 flex w-full items-center gap-2">
+      <div className="mt-4 flex w-full max-w-[560px] items-center gap-2">
         <StepButton label={t("sv_less")} onClick={() => update(v - q.step)}>−</StepButton>
         <input
           type="range"
@@ -543,9 +586,9 @@ function SliderStep({ q, answers, setAnswer, onNext }: {
         <StepButton label={t("sv_more")} onClick={() => update(v + q.step)}>+</StepButton>
       </div>
       {/* A "?" (I don't know) stays unknown unless the slider is moved. */}
-      <BigButton className="mt-5" onClick={onNext}>{t("continueButton")}</BigButton>
+      <BigButton data-check-main className="mt-5 sm:max-w-[360px]" onClick={onNext}>{t("continueButton")}</BigButton>
       {q.unknownLabel && (
-        <BigButton outlined className="mt-2.5" onClick={() => { setAnswer(q.id, null); onNext(); }}>
+        <BigButton outlined className="mt-2.5 sm:max-w-[360px]" onClick={() => { setAnswer(q.id, null); onNext(); }}>
           {t(q.unknownLabel)}
         </BigButton>
       )}
@@ -675,13 +718,15 @@ function LabsStep({ labs, onChange, onDone }: { labs: Labs; onChange: (l: Labs) 
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="grid gap-3 md:grid-cols-2 md:[&>*:last-child]:col-span-2">
       {field("ast", "sv_labAst", "sv_labAstHint", "sv_labAstExample")}
       {field("alt", "sv_labAlt", "sv_labAltHint", "sv_labAltExample")}
       {field("plt", "sv_labPlt", "sv_labPltHint", "sv_labPltExample")}
+      </div>
       {incomplete && (
         <div className="flex items-center gap-1.5 text-muted"><span aria-hidden>ⓘ</span>{t("sv_labNeedAllThree")}</div>
       )}
-      <BigButton className="mt-2" onClick={onDone}>{t("sv_seeMyResults")}</BigButton>
+      <BigButton data-check-main className="mt-2" onClick={onDone}>{t("sv_seeMyResults")}</BigButton>
     </div>
   );
 }

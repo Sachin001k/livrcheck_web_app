@@ -108,7 +108,9 @@ export function ProfileScreen() {
     const latestFib4 = data.fib4Checks[0] ?? null;
     const bmi = profileBmi(profile);
     body = (
-      <div className="flex flex-col animate-fade-up">
+      <div className="grid animate-fade-up gap-x-6 lg:grid-cols-2 lg:items-start">
+        {/* Left on laptops: score, streak, this week, stats. */}
+        <div className="flex min-w-0 flex-col">
         <ScoreCard last={last} delta={delta} level={level} into={into}
           onOpenLast={last?.result ? () => openEntry(last) : null} onStartCheck={onOpenCheck} />
         <div className="h-4" />
@@ -124,11 +126,15 @@ export function ProfileScreen() {
           <StatCard icon="⚖️" label={t("bmiLabel")} value={bmi != null ? bmi.toFixed(1) : "—"}
             caption={bmi == null ? t("noDataYet") : t(bmiKey[bmiCategory(bmi)])} color="#7b1fa2" />
         </div>
+        </div>
+        {/* Right on laptops: history, everyday list, activity. */}
+        <div className="flex min-w-0 flex-col lg:[&>h2:first-child]:mt-0">
         {history.length > 1 && (<><SectionTitle>{t("pf_scoreHistory")}</SectionTitle><ScoreChart history={history} /></>)}
         <SectionTitle>{t("pf_everyDay")}</SectionTitle>
         <EverydayList daily={daily} history={history} onOpen={openEntry} onStartCheck={onOpenCheck} />
         <div className="h-4" />
         <ActivityCard daily={daily} today={now} />
+        </div>
       </div>
     );
   }
@@ -139,7 +145,7 @@ export function ProfileScreen() {
       <div className="h-4" />
       {body}
       <EditProfileSheet open={editing} onClose={() => setEditing(false)} initial={profile} onSaved={() => void reloadProfile()} />
-      <Sheet open={openResult !== null} onClose={() => setOpenResult(null)} maxWidth={640}
+      <Sheet open={openResult !== null} onClose={() => setOpenResult(null)} maxWidth={1040}
         title={openResult ? shortDate(t, openResult.date) : undefined}>
         {openResult?.result && <ResultsView result={openResult.result} takenAt={openResult.date} onClose={() => setOpenResult(null)} />}
       </Sheet>

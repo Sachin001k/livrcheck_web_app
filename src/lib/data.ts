@@ -206,6 +206,7 @@ export async function exportMyData(): Promise<Row> {
     survey_responses: "id", assessments: "id", daily_checkins: "day",
     coin_events: "id", special_survey_responses: "id",
     daily_activity: "activity_date", daily_habits: "day",
+    login_events: "signed_in_at",
   };
   const names = Object.keys(tables);
   const [profile, ...rest] = await Promise.all([

@@ -12,7 +12,7 @@ export default function CheckLayout({ children }: { children: ReactNode }) {
   if (session) return <Gate>{children}</Gate>;
   return (
     <SiteFrame>
-      <main className="mx-auto w-full max-w-[720px] px-4 pt-6 pb-12 sm:pt-10">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 pt-6 pb-12 sm:px-6 sm:pt-10">{children}</main>
     </SiteFrame>
   );
 }

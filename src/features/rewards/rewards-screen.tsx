@@ -85,18 +85,22 @@ export function RewardsScreen() {
 
   const { rewards, badges } = data;
   return (
-    <div className="animate-fade-up">
-      <BalanceCard coins={rewards.totalCoins} />
-      <SectionTitle>{t("rewardsHowToEarn")}</SectionTitle>
-      <HowToEarn rules={rewards.rules} />
-      <SectionTitle>{t("rewardsSpecialSurveys")}</SectionTitle>
-      <SurveysList surveys={rewards.surveys} />
-      <SectionTitle>{t("rewardsBadges")}</SectionTitle>
-      <BadgesGrid badges={badges} />
-      <SectionTitle>{t("rewardsRedeem")}</SectionTitle>
-      <RedeemPlaceholder />
-      <SectionTitle>{t("rewardsHistory")}</SectionTitle>
-      <CoinHistory events={rewards.events} />
+    <div className="grid animate-fade-up gap-x-8 lg:grid-cols-2 lg:items-start">
+      <div className="min-w-0">
+        <BalanceCard coins={rewards.totalCoins} />
+        <SectionTitle>{t("rewardsHowToEarn")}</SectionTitle>
+        <HowToEarn rules={rewards.rules} />
+        <SectionTitle>{t("rewardsSpecialSurveys")}</SectionTitle>
+        <SurveysList surveys={rewards.surveys} />
+      </div>
+      <div className="min-w-0 lg:[&>h2:first-child]:mt-0">
+        <SectionTitle>{t("rewardsBadges")}</SectionTitle>
+        <BadgesGrid badges={badges} />
+        <SectionTitle>{t("rewardsRedeem")}</SectionTitle>
+        <RedeemPlaceholder />
+        <SectionTitle>{t("rewardsHistory")}</SectionTitle>
+        <CoinHistory events={rewards.events} />
+      </div>
     </div>
   );
 }

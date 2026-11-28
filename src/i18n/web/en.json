@@ -59,7 +59,7 @@
   "web_guestGuideNote": "Take the free 2-minute liver check — no account needed.",
   "web_optional": "optional",
   "web_guestName": "Name",
-  "web_guestNameHint": "Your name, or the name of the person you're filling this in for",
+  "web_guestNameHint": "Full name",
   "web_guestNameError": "Please enter a name.",
   "web_guestEmail": "Email",
   "web_guestEmailError": "Please enter a valid email, or leave it empty.",
@@ -69,5 +69,7 @@
   "web_guestHaveAccount": "Already have an account?",
   "web_guestResultsFor": "Results for {name}",
   "web_guestSaveNote": "These results are not saved to an account. Create a free account to keep them, track healthy habits and see your progress over time.",
-  "web_guestSaveCta": "Create a free account (optional)"
+  "web_guestSaveCta": "Create a free account (optional)",
+  "web_guestFormTitle": "Before you start",
+  "web_keyHint": "Tip: press 1–9 to pick an answer, Enter to continue."
 }
