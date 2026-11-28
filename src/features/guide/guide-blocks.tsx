@@ -321,7 +321,8 @@ function Swaps({ swaps }: { swaps: [GuideItem, GuideItem][] }) {
   );
 }
 
-function Myths({ pairs }: { pairs: [GuideItem, GuideItem][] }) {
+/** Myth / fact cards; `grid` = two per row on wide screens (home page). */
+export function Myths({ pairs, grid = false }: { pairs: [GuideItem, GuideItem][]; grid?: boolean }) {
   const { t } = useT();
   const part = (i: GuideItem, myth: boolean) => {
     const c = myth ? kHigh : kLow;
@@ -338,7 +339,7 @@ function Myths({ pairs }: { pairs: [GuideItem, GuideItem][] }) {
     );
   };
   return (
-    <div className="flex flex-col gap-3">
+    <div className={grid ? "grid gap-4 md:grid-cols-2" : "flex flex-col gap-3"}>
       {pairs.map(([m, f], n) => (
         <SurfaceCard key={n} className="overflow-hidden !p-0">
           {part(m, true)}

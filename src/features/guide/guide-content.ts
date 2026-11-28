@@ -1,10 +1,10 @@
 // Port of lib/learn/guide_content.dart — the liver guide (Guide tab),
 // following the LivrCheck fatty liver guidebook chapter by chapter. Every
 // text is a translation key; the English text is in src/i18n/en.json (gd_ keys).
-import { AGE_GROUPS, ageGroupInfo, type AgeGroup } from "./age-group";
+import { AGE_GROUPS, ageGroupInfo, type AgeGroup } from "./age-group-data";
 
-export { ageGroupFor, AGE_GROUPS, ageGroupInfo } from "./age-group";
-export type { AgeGroup } from "./age-group";
+export { ageGroupFor, AGE_GROUPS, ageGroupInfo } from "./age-group-data";
+export type { AgeGroup } from "./age-group-data";
 
 // ---------------------------------------------------------------- model
 
@@ -178,6 +178,9 @@ export const fiveSteps: GuideItem[] = [
   _i("🥗", "gd_5s4"),
   _i("⛰️", "gd_5s5"),
 ];
+
+/** "Myths vs facts" (guidebook p. 23) — also shown on the home page. */
+export const mythPairs: [GuideItem, GuideItem][] = range(6).map((n) => [_i("❌", `gd_my${n}`), _i("✅", `gd_my${n}f`)]);
 
 export const guideChapters: GuideChapter[] = [
   // ======================================================= 1. KNOW YOUR LIVER
@@ -525,7 +528,7 @@ export const guideChapters: GuideChapter[] = [
         id: "myths", emoji: "🤔", titleKey: "gd_myT",
         blocks: [
           text("gd_myIntro"),
-          { type: "myths", pairs: range(6).map((n) => [_i("❌", `gd_my${n}`), _i("✅", `gd_my${n}f`)] as [GuideItem, GuideItem]) },
+          { type: "myths", pairs: mythPairs },
           keyMsg("gd_myKey", "💡"),
         ],
       },

@@ -29,9 +29,13 @@ export interface ResultsViewProps {
   saveError?: string | null;
   /** Tries saving again; resolves to the new error, or null on success. */
   onRetrySave?: () => Promise<string | null>;
+  /** Set for a check taken without an account: onTrackHabits then offers a
+   * free account instead of the habit tracker. */
+  guestName?: string;
 }
 
-export function ResultsView({ result: r, takenAt, onTrackHabits, onClose, saveError: initialError = null, onRetrySave }: ResultsViewProps) {
+export function ResultsView({ result: r, takenAt, onTrackHabits, onClose, saveError: initialError = null, onRetrySave, guestName }: ResultsViewProps) {
+  const guest = guestName !== undefined;
   const { t, tf } = useT();
   // Open the organ that needs the most attention.
   const [sel, setSel] = useState(
@@ -54,7 +58,7 @@ export function ResultsView({ result: r, takenAt, onTrackHabits, onClose, saveEr
   return (
     <div className="mx-auto max-w-[520px] animate-fade-up pb-10">
       <h2 className="mb-3 text-xl font-extrabold">
-        {takenAt ? tf("sv_checkOnDate", { date: shortDate(t, takenAt) }) : t("sv_yourResults")}
+        {takenAt ? tf("sv_checkOnDate", { date: shortDate(t, takenAt) }) : guestName ? tf("web_guestResultsFor", { name: guestName }) : t("sv_yourResults")}
       </h2>
 
       {onRetrySave && <SaveBanner error={saveError} retrying={retrying} onRetry={retry} />}
@@ -167,7 +171,8 @@ export function ResultsView({ result: r, takenAt, onTrackHabits, onClose, saveEr
       <div className="mt-5 flex flex-col gap-2.5">
         {onTrackHabits ? (
           <>
-            <BigButton onClick={onTrackHabits}>{t("sv_trackHabits")}</BigButton>
+            {guest && <p className="rounded-[14px] bg-mint p-3.5 text-[15px] text-teal-dark">{t("web_guestSaveNote")}</p>}
+            <BigButton onClick={onTrackHabits}>{t(guest ? "web_guestSaveCta" : "sv_trackHabits")}</BigButton>
             <BigButton outlined onClick={onClose}>{t("sv_takeAgain")}</BigButton>
           </>
         ) : (

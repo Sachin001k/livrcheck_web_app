@@ -1,6 +1,6 @@
 "use client";
 // The public home page (/). Shows what LivrCheck is and real content from the
-// app — the Guide's chapters, food cards, the 5 steps and the FAQ — before
+// app — the Guide's chapters, food cards, the 5 steps, myths vs facts and the FAQ — before
 // anyone signs up. Text comes from the app's translations where it exists
 // (welcome*, gd_*, hm_*) and from src/i18n/web/ for website-only lines.
 import Link from "next/link";
@@ -8,8 +8,8 @@ import { useState, type ReactNode } from "react";
 import { useSession } from "@/components/session";
 import { cx, ScoreRing } from "@/components/ui";
 import { useT } from "@/lib/i18n";
-import { AgeGroupChips, alpha } from "@/features/guide/guide-blocks";
-import { faqFor, fiveSteps, guideChapterHref, guideChapters, guideTopicHref } from "@/features/guide/guide-content";
+import { AgeGroupChips, alpha, Myths } from "@/features/guide/guide-blocks";
+import { faqFor, fiveSteps, guideChapterHref, guideChapters, guideTopicHref, mythPairs } from "@/features/guide/guide-content";
 import { FoodCard } from "@/features/home/home-screen";
 import { HomeFaq, HomeSteps } from "@/features/home/home-extras";
 import { FoodDetailSheet } from "@/features/home/food-detail-sheet";
@@ -25,6 +25,7 @@ export function LandingPage() {
       <About />
       <HowItWorks />
       <GuidePreview />
+      <MythsFacts />
       <Foods onOpen={setOpenFood} />
       <Steps />
       <Faq />
@@ -39,7 +40,7 @@ function useCta() {
   const { session } = useSession();
   return session
     ? { href: "/check", labelKey: "web_heroCta", alt: { href: "/dashboard", labelKey: "web_openDashboard" } }
-    : { href: "/signup", labelKey: "web_heroCta", alt: { href: "/guide", labelKey: "web_heroCta2" } };
+    : { href: "/check", labelKey: "web_heroCta", alt: { href: "/guide", labelKey: "web_heroCta2" } };
 }
 
 function Section({ id, title, sub, children, className }: { id?: string; title: string; sub?: string; children: ReactNode; className?: string }) {
@@ -210,8 +211,8 @@ function HowItWorks() {
   const { t } = useT();
   const cta = useCta();
   const steps = [
-    { e: "✍️", title: "web_how1Title", body: "web_how1Body" },
-    { e: "📝", title: "web_how2Title", body: "web_how2Body" },
+    { e: "📝", title: "web_how1Title", body: "web_how1Body" },
+    { e: "📊", title: "web_how2Title", body: "web_how2Body" },
     { e: "🌱", title: "web_how3Title", body: "web_how3Body" },
   ];
   return (
@@ -285,6 +286,26 @@ function Steps() {
     <Section title={t("gd_homeStepsTitle")} sub={t("web_stepsSub")}>
       <div className="mx-auto max-w-3xl">
         <HomeSteps items={fiveSteps} />
+      </div>
+    </Section>
+  );
+}
+
+/** Guidebook p. 23 — the same six pairs as the Guide's "Myths vs facts" topic. */
+function MythsFacts() {
+  const { t } = useT();
+  return (
+    <Section id="myths" title={t("gd_myT")} sub={t("gd_myIntro")}>
+      <div className="mx-auto max-w-5xl">
+        <Myths pairs={mythPairs} grid />
+        <p className="mt-5 flex gap-2.5 rounded-2xl bg-[#FFF6E0] p-4 text-[15px] font-semibold text-[#7A5A12]">
+          <span aria-hidden>💡</span> {t("gd_myKey")}
+        </p>
+        <div className="mt-4 flex justify-center">
+          <Link href={guideTopicHref("myths")} className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 font-semibold text-teal-dark hover:bg-mint">
+            📖 {t("web_mythsMore")}
+          </Link>
+        </div>
       </div>
     </Section>
   );

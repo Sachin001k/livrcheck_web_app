@@ -107,3 +107,30 @@ export async function saveResult(
   await updateBodyStats({ age: age == null ? null : Math.round(age), heightCm: stat("height"), weightKg: stat("weight") });
   bumpChanges();
 }
+
+/** Who took a check without an account (entered on the check's first screen). */
+export interface GuestInfo {
+  name: string;
+  email: string;
+}
+
+/** Loose email check for the guest form; the database checks it again. */
+export const isValidEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim()) && s.trim().length <= 254;
+
+/** Saves a check taken without an account to guest_survey_responses
+ * (insert-only for visitors: nobody can read rows back from the website). */
+export async function saveGuestResult(r: AssessmentResult, answers: Answers, guest: GuestInfo, language: string): Promise<void> {
+  const email = guest.email.trim();
+  check(
+    await supabase().from("guest_survey_responses").insert({
+      full_name: guest.name.trim().slice(0, 100),
+      email: email === "" ? null : email.toLowerCase(),
+      survey_version: "v1",
+      answers,
+      score: r.score,
+      tier: r.tier,
+      result: resultToJson(r),
+      language,
+    }),
+  );
+}

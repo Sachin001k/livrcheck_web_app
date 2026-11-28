@@ -15,8 +15,8 @@ export default function GuideLayout({ children }: { children: ReactNode }) {
         <div className="mt-6 flex flex-col items-center gap-3 rounded-[20px] bg-mint p-5 text-center sm:flex-row sm:text-left">
           <span className="text-3xl" aria-hidden>🩺</span>
           <p className="flex-1 text-sm font-semibold text-teal-dark">{t("web_guestGuideNote")}</p>
-          <Link href="/signup" className="inline-flex min-h-11 items-center rounded-full bg-teal-dark px-5 text-sm font-semibold text-white hover:bg-[#184c45]">
-            {t("web_signup")}
+          <Link href="/check" className="inline-flex min-h-11 items-center rounded-full bg-teal-dark px-5 text-sm font-semibold text-white hover:bg-[#184c45]">
+            {t("web_heroCta")}
           </Link>
         </div>
       )}

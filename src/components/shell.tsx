@@ -26,6 +26,7 @@ const SITE_LINKS = [
   { href: "/guide", label: "web_navGuide" },
   { href: "/#how", label: "web_navHow" },
   { href: "/#foods", label: "web_navFoods" },
+  { href: "/#myths", label: "web_navMyths" },
   { href: "/#faq", label: "web_navFaq" },
 ] as const;
 
@@ -71,8 +72,8 @@ export function SiteHeader() {
               <Link href="/login" className="hidden min-h-10 items-center rounded-full px-4 text-sm font-semibold text-teal-dark hover:bg-mint sm:inline-flex">
                 {t("web_login")}
               </Link>
-              <Link href="/signup" className="hidden min-h-10 items-center rounded-full bg-teal-dark px-4 text-sm font-semibold text-white hover:bg-[#184c45] sm:inline-flex">
-                {t("web_signup")}
+              <Link href="/check" className="hidden min-h-10 items-center rounded-full bg-teal-dark px-4 text-sm font-semibold text-white hover:bg-[#184c45] sm:inline-flex">
+                {t("web_heroCta")}
               </Link>
             </>
           )}
@@ -99,7 +100,7 @@ export function SiteHeader() {
           </nav>
           <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line/60 pt-3">
             <Link href="/login" className="flex min-h-12 items-center justify-center rounded-full border border-teal-dark/40 font-semibold text-teal-dark">{t("web_login")}</Link>
-            <Link href="/signup" className="flex min-h-12 items-center justify-center rounded-full bg-teal-dark font-semibold text-white">{t("web_signup")}</Link>
+            <Link href="/check" className="flex min-h-12 items-center justify-center rounded-full bg-teal-dark font-semibold text-white">{t("web_heroCta")}</Link>
           </div>
         </div>
       )}
@@ -143,8 +144,9 @@ export function SiteFooter() {
           <ul className="space-y-2 text-sm">
             <li><Link className="hover:text-white" href="/guide">{t("web_navGuide")}</Link></li>
             <li><Link className="hover:text-white" href="/#how">{t("web_navHow")}</Link></li>
+            <li><Link className="hover:text-white" href="/#myths">{t("web_navMyths")}</Link></li>
             <li><Link className="hover:text-white" href="/#faq">{t("web_navFaq")}</Link></li>
-            <li><Link className="hover:text-white" href="/signup">{t("web_signup")}</Link></li>
+            <li><Link className="hover:text-white" href="/check">{t("web_heroCta")}</Link></li>
           </ul>
         </div>
         <div>

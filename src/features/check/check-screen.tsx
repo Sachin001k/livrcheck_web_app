@@ -3,17 +3,24 @@
 // health check in the Check tab. In-progress answers are kept in
 // sessionStorage (the app keeps them alive in an IndexedStack), and browser
 // Back steps to the previous question / closes the results.
+// With `guest`, anyone can take the check without an account: they give a
+// name (and optionally an email) first, and the result goes to
+// guest_survey_responses instead of their profile.
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useT } from "@/lib/i18n";
+import { getLang, useT } from "@/lib/i18n";
 import { useLoad, type Profile } from "@/lib/data";
 import { describeError } from "@/lib/auth";
-import { useProfile } from "@/components/session";
+import { useSession } from "@/components/session";
 import { BigButton, ProgressBar, ScoreRing, SurfaceCard, cx, haptic } from "@/components/ui";
 import { assess, plateletsToG, type Answers, type AssessmentResult } from "./assess";
 import { BodyMap } from "./body-map";
 import { kDisclaimer, kHigh, kModDark, scoreColor, shortDate, tierText, trText } from "./health-ui";
-import { lastEntry, loadProgress, newSaveProgress, saveResult, type ScoreEntry } from "./progress-store";
+import {
+  isValidEmail, lastEntry, loadProgress, newSaveProgress, saveGuestResult, saveResult,
+  type GuestInfo, type ProgressData, type ScoreEntry,
+} from "./progress-store";
 import { toggleMulti, visibleQuestions, type Opt, type Question } from "./questions";
 import { ResultsView } from "./results";
 
@@ -30,6 +37,8 @@ interface Stored {
   step: number;
   answers: Answers;
   fromProfile: Record<string, number>;
+  /** Guest mode only: who is taking the check. */
+  guest?: GuestInfo;
 }
 
 type ResultsState = {
@@ -52,6 +61,8 @@ function readStored(uid: string): Stored | null {
 function writeStored(uid: string, s: Stored) {
   try { sessionStorage.setItem(storeKey(uid), JSON.stringify(s)); } catch { /* ignore */ }
 }
+
+const noProgress = async (): Promise<ProgressData> => ({ history: [] });
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -110,41 +121,45 @@ function useBackGuard(active: boolean, onBack: () => void) {
   return useCallback(() => { pushed.current = false; }, []);
 }
 
-export function CheckScreen() {
+export function CheckScreen({ guest = false }: { guest?: boolean }) {
   const { t, tf } = useT();
   const router = useRouter();
-  const { profile, reloadProfile } = useProfile();
+  const session = useSession();
+  const reloadProfile = session.reloadProfile;
+  // Signed in, the Gate only shows this page once the profile is complete.
+  const profile = guest ? null : session.profile;
+  const storeId = profile?.id ?? "guest";
 
   const [state, setState] = useState<Stored>(() => {
-    const stored = typeof window === "undefined" ? null : readStored(profile.id);
+    const stored = typeof window === "undefined" ? null : readStored(storeId);
     if (stored) return stored;
     const answers: Answers = {};
     const fromProfile: Record<string, number> = {};
-    prefill(answers, fromProfile, profile);
-    return { started: false, step: 0, answers, fromProfile };
+    if (profile) prefill(answers, fromProfile, profile);
+    return { started: false, step: 0, answers, fromProfile, guest: guest ? { name: "", email: "" } : undefined };
   });
   const [saving, setSaving] = useState(false);
   const [results, setResults] = useState<ResultsState | null>(null);
   const advancing = useRef(false);
   const { started, step, answers: a } = state;
 
-  useEffect(() => writeStored(profile.id, state), [profile.id, state]);
+  useEffect(() => writeStored(storeId, state), [storeId, state]);
 
   // Pick up profile edits (only the fields that changed).
   const prevProfile = useRef(profile);
   useEffect(() => {
     const old = prevProfile.current;
     prevProfile.current = profile;
-    if (old === profile) return;
+    if (old === profile || !profile) return;
     setState((s) => {
       const answers = { ...s.answers };
       const fromProfile = { ...s.fromProfile };
-      prefill(answers, fromProfile, profile, old);
+      prefill(answers, fromProfile, profile, old ?? undefined);
       return { ...s, answers, fromProfile };
     });
   }, [profile]);
 
-  const last = useLoad(loadProgress);
+  const last = useLoad(guest ? noProgress : loadProgress);
   const lastCheck = last.data ? lastEntry(last.data) : null;
 
   const visible = visibleQuestions(a);
@@ -158,10 +173,10 @@ export function CheckScreen() {
       // about the blood report again. Body stats come fresh from the profile.
       const answers = { ...s.answers };
       const fromProfile = { ...s.fromProfile };
-      prefill(answers, fromProfile, profile);
+      if (profile) prefill(answers, fromProfile, profile);
       delete answers.hasReport;
       delete answers.labs;
-      return { started: true, step: 0, answers, fromProfile };
+      return { ...s, started: true, step: 0, answers, fromProfile };
     });
   };
 
@@ -181,6 +196,18 @@ export function CheckScreen() {
     );
     const unknownError = t("sv_unknownError");
     setSaving(true);
+    if (guest) {
+      // Best effort: the result is shown either way.
+      try {
+        await saveGuestResult(result, input, state.guest ?? { name: "", email: "" }, getLang());
+      } catch (e) {
+        console.warn("Could not save guest check", e);
+      }
+      setSaving(false);
+      setState((s) => ({ ...s, started: false, step: 0 }));
+      setResults({ result, fresh: true, saveError: null });
+      return;
+    }
     // Shared by the first try and every retry, so rows aren't inserted twice.
     const progress = newSaveProgress();
     const save = async (): Promise<string | null> => {
@@ -224,7 +251,12 @@ export function CheckScreen() {
         takenAt={results.takenAt}
         saveError={results.saveError}
         onRetrySave={results.fresh ? results.retry : undefined}
-        onTrackHabits={results.fresh ? () => {
+        guestName={guest ? state.guest?.name.trim() : undefined}
+        onTrackHabits={guest ? () => {
+          releaseGuard();
+          setResults(null);
+          router.push("/signup");
+        } : results.fresh ? () => {
           // Replace the guard entry with Profile, so Back returns to Check.
           releaseGuard();
           setResults(null);
@@ -239,6 +271,8 @@ export function CheckScreen() {
     return (
       <Intro
         last={lastCheck}
+        guest={state.guest}
+        onGuestChange={(g) => setState((s) => ({ ...s, guest: g }))}
         onStart={start}
         onOpenLast={(e) => e.result && setResults({ result: e.result, takenAt: e.date, fresh: false, saveError: null })}
       />
@@ -317,9 +351,24 @@ export function CheckScreen() {
   );
 }
 
-function Intro({ last, onStart, onOpenLast }: { last: ScoreEntry | null; onStart: () => void; onOpenLast: (e: ScoreEntry) => void }) {
+function Intro({ last, guest, onGuestChange, onStart, onOpenLast }: {
+  last: ScoreEntry | null;
+  /** Guest mode: name/email form. */
+  guest?: GuestInfo;
+  onGuestChange: (g: GuestInfo) => void;
+  onStart: () => void;
+  onOpenLast: (e: ScoreEntry) => void;
+}) {
   const { t } = useT();
   const points = ["sv_introPoint1", "sv_introPoint2", "sv_introPoint3"];
+  const [agreed, setAgreed] = useState(false);
+  const [tried, setTried] = useState(false);
+  const nameOk = !guest || guest.name.trim().length > 0;
+  const emailOk = !guest || guest.email.trim() === "" || isValidEmail(guest.email);
+  const startGuest = () => {
+    setTried(true);
+    if (nameOk && emailOk && agreed) onStart();
+  };
   return (
     <div className="mx-auto max-w-[520px] pb-10 animate-fade-up">
       {last && <LastCheckCard entry={last} onOpen={() => onOpenLast(last)} />}
@@ -339,10 +388,69 @@ function Intro({ last, onStart, onOpenLast }: { last: ScoreEntry | null; onStart
             </li>
           ))}
         </ul>
-        <BigButton className="mt-5" onClick={onStart}>{t("sv_startCheck")}</BigButton>
+        {guest ? (
+          <GuestForm guest={guest} onChange={onGuestChange} agreed={agreed} onAgreed={setAgreed}
+            showErrors={tried} nameOk={nameOk} emailOk={emailOk} onSubmit={startGuest} />
+        ) : (
+          <BigButton className="mt-5" onClick={onStart}>{t("sv_startCheck")}</BigButton>
+        )}
       </SurfaceCard>
+      {guest && (
+        <p className="mt-4 text-center text-sm text-muted">
+          {t("web_guestHaveAccount")}{" "}
+          <Link href="/login?next=%2Fcheck" className="font-semibold text-teal-dark hover:underline">{t("web_login")}</Link>
+        </p>
+      )}
       <p className="mt-4 text-xs text-muted">{t(kDisclaimer)}</p>
     </div>
+  );
+}
+
+/** Name (required), email (optional) and privacy consent before a guest check. */
+function GuestForm({ guest, onChange, agreed, onAgreed, showErrors, nameOk, emailOk, onSubmit }: {
+  guest: GuestInfo; onChange: (g: GuestInfo) => void;
+  agreed: boolean; onAgreed: (v: boolean) => void;
+  showErrors: boolean; nameOk: boolean; emailOk: boolean; onSubmit: () => void;
+}) {
+  const { t } = useT();
+  const input = "mt-1 w-full rounded-xl border bg-white px-3 py-3 text-base text-ink outline-none focus:border-teal-dark";
+  const err = (show: boolean, key: string, id: string) =>
+    show ? <span id={id} className="mt-1 block text-sm" style={{ color: kHigh }}>{t(key)}</span> : null;
+  return (
+    <form className="mt-5 flex flex-col gap-3" noValidate onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <label className="block text-[15px] font-semibold">
+        {t("web_guestName")}
+        <input
+          value={guest.name} maxLength={100} autoComplete="name"
+          onChange={(e) => onChange({ ...guest, name: e.target.value })}
+          placeholder={t("web_guestNameHint")}
+          aria-invalid={showErrors && !nameOk} aria-describedby="guest-name-err"
+          className={cx(input, showErrors && !nameOk ? "border-[#C4513A]" : "border-line")}
+        />
+        {err(showErrors && !nameOk, "web_guestNameError", "guest-name-err")}
+      </label>
+      <label className="block text-[15px] font-semibold">
+        {t("web_guestEmail")} <span className="font-normal text-muted">({t("web_optional")})</span>
+        <input
+          type="email" inputMode="email" value={guest.email} maxLength={254} autoComplete="email"
+          onChange={(e) => onChange({ ...guest, email: e.target.value })}
+          placeholder="name@example.com"
+          aria-invalid={showErrors && !emailOk} aria-describedby="guest-email-err"
+          className={cx(input, showErrors && !emailOk ? "border-[#C4513A]" : "border-line")}
+        />
+        {err(showErrors && !emailOk, "web_guestEmailError", "guest-email-err")}
+      </label>
+      <p className="text-sm text-muted">{t("web_guestForSomeone")}</p>
+      <label className="flex items-start gap-2.5 text-sm">
+        <input type="checkbox" checked={agreed} onChange={(e) => onAgreed(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-teal-dark" />
+        <span>
+          {t("web_guestConsent")}{" "}
+          <Link href="/privacy" target="_blank" className="font-semibold text-teal-dark underline">{t("web_footerPrivacy")}</Link>
+        </span>
+      </label>
+      {err(showErrors && !agreed, "web_guestConsentError", "guest-consent-err")}
+      <BigButton className="mt-1" type="submit">{t("sv_startCheck")}</BigButton>
+    </form>
   );
 }
 
